@@ -1,14 +1,6 @@
-use regex::Regex;
+use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::str::FromStr;
-
-#[derive(Debug)]
-struct Hanzi {
-    ids: Vec<u32>,
-    simplified: String,
-    traditional: String,
-}
 
 fn str_to_u32(s: &str) -> Option<u32> {
     let mut r = 0;
@@ -21,43 +13,38 @@ fn str_to_u32(s: &str) -> Option<u32> {
     Some(r)
 }
 
-impl FromStr for Hanzi {
-    type Err = std::str::Utf8Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut hanzi = Hanzi {
-            simplified: "".to_owned(),
-            traditional: "".to_owned(),
-            ids: vec![],
-        };
-
-        let re = Regex::new(r"(\p{L}+|\d+)").unwrap();
-
-        for group in re.find_iter(s).map(|m| m.as_str()) {
-            match str_to_u32(group) {
-                Some(n) => hanzi.ids.push(n),
-                None if hanzi.simplified == "" => hanzi.simplified = group.to_string(),
-                None => hanzi.traditional = group.to_string(),
-            }
+fn get_ids(s: &str) -> Vec<u32> {
+    let mut result: Vec<u32> = Vec::new();
+    let parts = s.split(',');
+    for part in parts {
+        match str_to_u32(part) {
+            Some(n) => result.push(n),
+            None => {}
         }
-        if hanzi.traditional == "" {
-            hanzi.traditional = hanzi.simplified.clone();
-        }
-        Ok(hanzi)
     }
+    result
+}
+
+fn get_word(s: &str) -> String {
+    s.split(',').next().unwrap().to_string()
 }
 
 fn main() {
     let file = fs::File::open("./data/cedict.idx").unwrap();
     let buffered = BufReader::new(file);
 
-    let mut result: Vec<Hanzi> = vec![];
+    let mut result: HashMap<String, Vec<u32>> = HashMap::new();
 
     for line in buffered.lines() {
-        match Hanzi::from_str(&line.unwrap()) {
-            Ok(hanzi) => result.push(hanzi),
+        match line {
             Err(_) => {}
+            Ok(l) => {
+                let word = get_word(&l);
+                let ids = get_ids(&l);
+                result.insert(word, ids);
+            }
         }
     }
     println!("Ok");
-    println!("{:?}", result);
+    println!("你好 {:?}", result.get("你好"))
 }
