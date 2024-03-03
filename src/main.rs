@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Error, Write};
 
 fn str_to_u32(s: &str) -> Option<u32> {
     let mut r = 0;
@@ -52,6 +52,31 @@ fn get_word_from(
     Some((start + result.chars().count() + 1, result))
 }
 
+fn save_words(words: &HashMap<String, u32>) -> Result<(), Error> {
+    let threshhold: u32 = 3;
+    let known: Vec<_> = words.iter().filter(|(_, n)| *n >= &threshhold).collect();
+    let learning: Vec<_> = words.iter().filter(|(_, n)| *n <= &threshhold).collect();
+    println!("{:?}\n{:?}", known, learning);
+
+    let mut file = fs::File::create("./data/.known_words")?;
+    let known_words: String = known
+        .into_iter()
+        .map(|(word, _)| word.to_owned())
+        .collect::<Vec<_>>()
+        .join("\n");
+    write!(file, "{}", &known_words)?;
+
+    let mut file = fs::File::create("./data/.learning_words")?;
+    let learning_words: String = learning
+        .into_iter()
+        .map(|(word, occurrences)| format!("{},{}", word, occurrences))
+        .collect::<Vec<_>>()
+        .join("\n");
+    write!(file, "{}", &learning_words)?;
+
+    Ok(())
+}
+
 fn main() {
     let file = fs::File::open("./data/cedict.idx").unwrap();
     let buffered = BufReader::new(file);
@@ -79,4 +104,7 @@ fn main() {
         i = r.0;
     }
     println!("{:?}", occurrences);
+
+    let save_result = save_words(&occurrences);
+    println!("{:?}", save_result);
 }
