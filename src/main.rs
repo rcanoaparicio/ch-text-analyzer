@@ -72,15 +72,31 @@ fn get_learning_words() -> HashMap<String, u32> {
 }
 
 fn save_words(words: &HashMap<String, u32>) -> Result<(), Error> {
+    let prev_learning_words = get_learning_words();
+    let words = words.iter().map(|(word, n)| {
+        let prev_v = match prev_learning_words.get(word) {
+            Some(amount) => amount.clone(),
+            None => 0,
+        };
+        (word, n + prev_v)
+    });
+
     let threshhold: u32 = 3;
-    let known: Vec<_> = words.iter().filter(|(_, n)| *n >= &threshhold).collect();
-    let learning: Vec<_> = words.iter().filter(|(_, n)| *n <= &threshhold).collect();
+    let known: Vec<_> = words
+        .clone()
+        .filter(|(_, n)| *n >= threshhold)
+        .map(|(word, _)| word)
+        .collect();
+    let learning: Vec<_> = words
+        .clone()
+        .filter(|(word, n)| *n <= threshhold && !known.contains(word))
+        .collect();
     println!("{:?}\n{:?}", known, learning);
 
     let mut file = fs::File::create("./data/.known_words")?;
     let known_words: String = known
         .into_iter()
-        .map(|(word, _)| word.to_owned())
+        .map(|word| word.to_owned())
         .collect::<Vec<_>>()
         .join("\n");
     write!(file, "{}", &known_words)?;
