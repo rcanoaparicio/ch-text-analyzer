@@ -52,6 +52,25 @@ fn get_word_from(
     Some((start + result.chars().count() + 1, result))
 }
 
+fn get_learning_words() -> HashMap<String, u32> {
+    let file = fs::File::open("./data/.learning_words").unwrap();
+    let buffered = BufReader::new(file);
+
+    let mut result: HashMap<String, u32> = HashMap::new();
+
+    for line in buffered.lines() {
+        match line {
+            Err(_) => {}
+            Ok(l) => {
+                let parts: Vec<&str> = l.split(',').collect();
+                result.insert(parts[0].to_string(), str_to_u32(parts[1]).unwrap());
+            }
+        }
+    }
+
+    result
+}
+
 fn save_words(words: &HashMap<String, u32>) -> Result<(), Error> {
     let threshhold: u32 = 3;
     let known: Vec<_> = words.iter().filter(|(_, n)| *n >= &threshhold).collect();
@@ -107,4 +126,7 @@ fn main() {
 
     let save_result = save_words(&occurrences);
     println!("{:?}", save_result);
+
+    let learning_words = get_learning_words();
+    println!("Learnign words: {:?}", learning_words);
 }
